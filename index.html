@@ -1,237 +1,213 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="referrer" content="no-referrer"> 
-    <title>极简智航</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
-    <style>
-        :root {
-            --bg: #f3f4f6; --header-bg: rgba(243, 244, 246, 0.9);
-            --card-bg: #ffffff; --text-main: #111827; --text-sub: #6b7280;
-            --border: #e5e7eb; --input-bg: #e5e7eb; --input-focus: #ffffff;
-            --primary: #4f46e5; --icon-bg: #f3f4f6; --shadow: rgba(0, 0, 0, 0.04);
-        }
-        [data-theme="dark"] {
-            --bg: #0f172a; --header-bg: rgba(15, 23, 42, 0.9);
-            --card-bg: #1e293b; --text-main: #f1f5f9; --text-sub: #94a3b8;
-            --border: rgba(255, 255, 255, 0.08); --input-bg: #334155;
-            --input-focus: #1e293b; --primary: #818cf8; --icon-bg: rgba(255, 255, 255, 0.05);
-            --shadow: rgba(0, 0, 0, 0.3);
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); font-family: -apple-system, system-ui, sans-serif; color: var(--text-main); padding-bottom: 60px; transition: background 0.3s; }
-        [v-cloak] { display: none; }
-
-        header {
-            position: sticky; top: 0; z-index: 100;
-            background: var(--header-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-            padding: 12px 16px; border-bottom: 1px solid var(--border);
-        }
-        .header-inner { max-width: 900px; margin: 0 auto; display: flex; gap: 12px; align-items: center; }
-
-        .search-box {
-            flex: 1; height: 44px; background: var(--input-bg);
-            border-radius: 12px; display: flex; align-items: center; padding: 0 14px;
-            border: 2px solid transparent; transition: all 0.2s;
-        }
-        .search-box:focus-within { background: var(--input-focus); border-color: var(--primary); box-shadow: 0 4px 12px var(--shadow); }
-        .search-input { flex: 1; height: 100%; border: none; background: transparent; outline: none; font-size: 16px; margin-left: 10px; color: var(--text-main); }
-
-        .theme-btn {
-            width: 44px; height: 44px; border-radius: 12px;
-            background: var(--card-bg); border: 1px solid var(--border);
-            display: flex; align-items: center; justify-content: center;
-            color: var(--text-main); cursor: pointer; flex-shrink: 0;
-        }
-
-        main { max-width: 900px; margin: 0 auto; padding: 10px 16px; }
-        .cat-title {
-            font-size: 16px; font-weight: 800; color: var(--primary);
-            margin: 32px 0 14px 4px; text-transform: uppercase; letter-spacing: 1px;
-            display: flex; align-items: center;
-        }
-        .cat-title::after { content: ""; flex: 1; height: 1px; background: var(--border); margin-left: 12px; opacity: 0.5; }
-
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        @media (min-width: 768px) { .grid { grid-template-columns: repeat(4, 1fr); gap: 16px; } }
-
-        .nav-card {
-            display: flex; align-items: center; background: var(--card-bg); padding: 14px;
-            border-radius: 16px; text-decoration: none; border: 1px solid var(--border);
-            box-shadow: 0 2px 4px var(--shadow); transition: all 0.3s;
-            min-height: 72px; min-width: 0;
-        }
-        .nav-card:active { transform: scale(0.97); }
-
-        .icon-wrap {
-            width: 40px; height: 40px; min-width: 40px;
-            background: var(--icon-bg); border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            margin-right: 12px; position: relative;
-            border: 1px solid var(--border); overflow: hidden;
-        }
-        .icon-txt {
-            position: absolute; font-size: 18px; font-weight: 800; 
-            color: var(--primary); z-index: 1; text-transform: uppercase; opacity: 0.4;
-        }
-        .icon-img {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            object-fit: cover; z-index: 2; opacity: 0; transition: opacity 0.3s ease;
-            background: var(--card-bg); 
-        }
-
-        .is-loaded .icon-img { opacity: 1; }
-        .is-loaded .icon-txt { visibility: hidden !important; }
-
-        .info { flex: 1; min-width: 0; }
-        .name { font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .desc { font-size: 11px; color: var(--text-sub); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        /* 骨架屏动画 */
-        .skeleton-item {
-            height: 72px; background: var(--card-bg); border-radius: 16px;
-            border: 1px solid var(--border); animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    </style>
-</head>
-<body>
-    <div id="app" v-cloak>
-        <header>
-            <div class="header-inner">
-                <div class="search-box">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--text-sub)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input v-model="q" type="text" placeholder="搜索..." class="search-input" spellcheck="false">
-                </div>
-                <button class="theme-btn" @click="toggleTheme">
-                    <svg v-if="isDark" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                    <svg v-else width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-                </button>
-            </div>
-        </header>
-
-        <main>
-            <div v-if="data.length === 0" class="grid" style="margin-top: 30px;">
-                <div v-for="i in 8" :key="i" class="skeleton-item"></div>
-            </div>
-
-            <section v-for="cat in filtered" :key="cat.category">
-                <div class="cat-title">{{ cat.category }}</div>
-                <div class="grid">
-                    <a v-for="item in cat.items" 
-                       :key="item.url" 
-                       :href="item.url" 
-                       target="_blank" 
-                       rel="noopener noreferrer" 
-                       class="nav-card">
-                        <div class="icon-wrap" :class="status[item.url]">
-                            <span class="icon-txt">{{ (item.name || 'L')[0] }}</span>
-                            <img class="icon-img" 
-                                 :src="getIcon(item.url)" 
-                                 @load="status[item.url]='is-loaded'" 
-                                 @error="fallback($event, item.url)">
-                        </div>
-                        <div class="info">
-                            <p class="name">{{ item.name }}</p>
-                            <p class="desc">{{ item.desc || '点击访问' }}</p>
-                        </div>
-                    </a>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <script>
-        const { createApp, ref, reactive, computed, onMounted } = Vue;
-        createApp({
-            setup() {
-                const data = ref([]);
-                const q = ref('');
-                const status = reactive({});
-                const isDark = ref(false);
-                const TG_LOGO = 'https://cdnjs.cloudflare.com/ajax/libs/logos/0.0.1/telegram.svg';
-
-                const setTheme = (dark) => {
-                    isDark.value = dark;
-                    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-                    localStorage.setItem('theme', dark ? 'dark' : 'light');
-                };
-
-                const getIcon = (url) => {
-                    try {
-                        const urlObj = new URL(url);
-                        const host = urlObj.hostname.toLowerCase();
-                        const path = urlObj.pathname;
-                        
-                        if (host === 't.me' || host === 'telegram.me') {
-                            // 修正：Telegram 私密/加入链接识别
-                            if (path.includes('+') || path.includes('joinchat')) return TG_LOGO;
-                            const parts = path.split('/').filter(p => p);
-                            if (parts.length > 0 && !['s', 'iv', 'contact'].includes(parts[0])) {
-                                return `https://t.me/i/userpic/320/${parts[0]}.jpg`;
-                            }
-                            return TG_LOGO;
-                        }
-                        return `https://icons.duckduckgo.com/ip3/${host}.ico`;
-                    } catch(e) { return ''; }
-                };
-
-                const fallback = (e, url) => {
-                    try {
-                        const urlObj = new URL(url);
-                        const domain = urlObj.hostname;
-                        if (domain.includes('t.me') && e.target.src !== TG_LOGO) {
-                            e.target.src = TG_LOGO;
-                            return;
-                        }
-                        const g = `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
-                        if (e.target.src !== g) e.target.src = g;
-                    } catch (err) { status[url] = 'is-failed'; }
-                };
-
-                // 核心：直接读取并解析 YAML
-                const initData = async () => {
-                    const cache = localStorage.getItem('nav_yml_cache');
-                    if (cache) data.value = JSON.parse(cache);
-
-                    try {
-                        // Cloudflare Pages 会静态发布 data/links.yml
-                        const r = await fetch('data/links.yml');
-                        if (r.ok) {
-                            const ymlText = await r.text();
-                            // 使用 js-yaml 解析
-                            const res = jsyaml.load(ymlText);
-                            data.value = res;
-                            localStorage.setItem('nav_yml_cache', JSON.stringify(res));
-                        }
-                    } catch (e) { console.error("YAML加載失敗"); }
-                };
-
-                const filtered = computed(() => {
-                    if (!q.value) return data.value;
-                    const s = q.value.toLowerCase();
-                    return data.value.map(c => ({
-                        ...c, 
-                        items: (c.items||[]).filter(i => 
-                            (i.name && i.name.toLowerCase().includes(s)) || 
-                            (i.desc && i.desc.toLowerCase().includes(s))
-                        )
-                    })).filter(c => c.items.length > 0);
-                });
-
-                onMounted(() => {
-                    const saved = localStorage.getItem('theme');
-                    setTheme(saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches));
-                    initData();
-                });
-
-                return { q, data, status, isDark, toggleTheme: () => setTheme(!isDark.value), getIcon, fallback, filtered };
-            }
-        }).mount('#app');
-    </script>
-</body>
-</html>
+<!DOCTYPE html>  
+<html lang="zh-CN">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">  
+    <meta name="referrer" content="no-referrer">   
+    <title>极简智航</title>  
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>  
+    <script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>  
+    <style>  
+        :root {  
+            --bg: #f3f4f6; --header-bg: rgba(243, 244, 246, 0.9);  
+            --card-bg: #ffffff; --text-main: #111827; --text-sub: #6b7280;  
+            --border: #e5e7eb; --input-bg: #e5e7eb; --input-focus: #ffffff;  
+            --primary: #4f46e5; --icon-bg: #f3f4f6; --shadow: rgba(0, 0, 0, 0.04);  
+        }  
+        [data-theme="dark"] {  
+            --bg: #0f172a; --header-bg: rgba(15, 23, 42, 0.9);  
+            --card-bg: #1e293b; --text-main: #f1f5f9; --text-sub: #94a3b8;  
+            --border: rgba(255, 255, 255, 0.08); --input-bg: #334155;  
+            --input-focus: #1e293b; --primary: #818cf8; --icon-bg: rgba(255, 255, 255, 0.05);  
+            --shadow: rgba(0, 0, 0, 0.3);  
+        }  
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }  
+        body { background: var(--bg); font-family: -apple-system, system-ui, sans-serif; color: var(--text-main); padding-bottom: 60px; transition: background 0.3s; }  
+        [v-cloak] { display: none; }  
+        header {  
+            position: sticky; top: 0; z-index: 100;  
+            background: var(--header-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);  
+            padding: 12px 16px; border-bottom: 1px solid var(--border);  
+        }  
+        .header-inner { max-width: 900px; margin: 0 auto; display: flex; gap: 12px; align-items: center; }  
+        .search-box {  
+            flex: 1; height: 44px; background: var(--input-bg);  
+            border-radius: 12px; display: flex; align-items: center; padding: 0 14px;  
+            border: 2px solid transparent; transition: all 0.2s;  
+        }  
+        .search-box:focus-within { background: var(--input-focus); border-color: var(--primary); box-shadow: 0 4px 12px var(--shadow); }  
+        .search-input { flex: 1; height: 100%; border: none; background: transparent; outline: none; font-size: 16px; margin-left: 10px; color: var(--text-main); }  
+        .theme-btn {  
+            width: 44px; height: 44px; border-radius: 12px;  
+            background: var(--card-bg); border: 1px solid var(--border);  
+            display: flex; align-items: center; justify-content: center;  
+            color: var(--text-main); cursor: pointer; flex-shrink: 0;  
+        }  
+        main { max-width: 900px; margin: 0 auto; padding: 10px 16px; }  
+        .cat-title {  
+            font-size: 16px; font-weight: 800; color: var(--primary);  
+            margin: 32px 0 14px 4px; text-transform: uppercase; letter-spacing: 1px;  
+            display: flex; align-items: center;  
+        }  
+        .cat-title::after { content: ""; flex: 1; height: 1px; background: var(--border); margin-left: 12px; opacity: 0.5; }  
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }  
+        @media (min-width: 768px) { .grid { grid-template-columns: repeat(4, 1fr); gap: 16px; } }  
+        .nav-card {  
+            display: flex; align-items: center; background: var(--card-bg); padding: 14px;  
+            border-radius: 16px; text-decoration: none; border: 1px solid var(--border);  
+            box-shadow: 0 2px 4px var(--shadow); transition: all 0.3s;  
+            min-height: 72px; min-width: 0;  
+        }  
+        .nav-card:active { transform: scale(0.97); }  
+        .icon-wrap {  
+            width: 40px; height: 40px; min-width: 40px;  
+            background: var(--icon-bg); border-radius: 10px;  
+            display: flex; align-items: center; justify-content: center;  
+            margin-right: 12px; position: relative;  
+            border: 1px solid var(--border); overflow: hidden;  
+        }  
+        .icon-txt {  
+            position: absolute; font-size: 18px; font-weight: 800;   
+            color: var(--primary); z-index: 1; text-transform: uppercase; opacity: 0.4;  
+        }  
+        .icon-img {  
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;   
+            object-fit: cover; z-index: 2; opacity: 0; transition: opacity 0.3s ease;  
+            background: var(--card-bg);   
+        }  
+        .is-loaded .icon-img { opacity: 1; }  
+        .is-loaded .icon-txt { visibility: hidden !important; }  
+        .info { flex: 1; min-width: 0; }  
+        .name { font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }  
+        .desc { font-size: 11px; color: var(--text-sub); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }  
+        /* 骨架屏动画 */  
+        .skeleton-item {  
+            height: 72px; background: var(--card-bg); border-radius: 16px;  
+            border: 1px solid var(--border); animation: pulse 1.5s infinite;  
+        }  
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }  
+    </style>  
+</head>  
+<body>  
+    <div id="app" v-cloak>  
+        <header>  
+            <div class="header-inner">  
+                <div class="search-box">  
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--text-sub)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>  
+                    <input v-model="q" type="text" placeholder="搜索..." class="search-input" spellcheck="false">  
+                </div>  
+                <button class="theme-btn" @click="toggleTheme">  
+                    <svg v-if="isDark" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>  
+                    <svg v-else width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>  
+                </button>  
+            </div>  
+        </header>  
+        <main>  
+            <div v-if="data.length === 0" class="grid" style="margin-top: 30px;">  
+                <div v-for="i in 8" :key="i" class="skeleton-item"></div>  
+            </div>  
+            <section v-for="cat in filtered" :key="cat.category">  
+                <div class="cat-title">{{ cat.category }}</div>  
+                <div class="grid">  
+                    <a v-for="item in cat.items"   
+                       :key="item.url"   
+                       :href="item.url"   
+                       target="_blank"   
+                       rel="noopener noreferrer"   
+                       class="nav-card">  
+                        <div class="icon-wrap" :class="status[item.url]">  
+                            <span class="icon-txt">{{ (item.name || 'L')[0] }}</span>  
+                            <img class="icon-img"   
+                                 :src="getIcon(item.url)"   
+                                 @load="status[item.url]='is-loaded'"   
+                                 @error="fallback($event, item.url)">  
+                        </div>  
+                        <div class="info">  
+                            <p class="name">{{ item.name }}</p>  
+                            <p class="desc">{{ item.desc || '点击访问' }}</p>  
+                        </div>  
+                    </a>  
+                </div>  
+            </section>  
+        </main>  
+    </div>  
+    <script>  
+        const { createApp, ref, reactive, computed, onMounted } = Vue;  
+        createApp({  
+            setup() {  
+                const data = ref([]);  
+                const q = ref('');  
+                const status = reactive({});  
+                const isDark = ref(false);  
+                const TG_LOGO = 'https://cdnjs.cloudflare.com/ajax/libs/logos/0.0.1/telegram.svg';  
+                const setTheme = (dark) => {  
+                    isDark.value = dark;  
+                    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');  
+                    localStorage.setItem('theme', dark ? 'dark' : 'light');  
+                };  
+                const getIcon = (url) => {  
+                    try {  
+                        const urlObj = new URL(url);  
+                        const host = urlObj.hostname.toLowerCase();  
+                        const path = urlObj.pathname;  
+                          
+                        if (host === 't.me' || host === 'telegram.me') {  
+                            // 修正：Telegram 私密/加入链接识别  
+                            if (path.includes('+') || path.includes('joinchat')) return TG_LOGO;  
+                            const parts = path.split('/').filter(p => p);  
+                            if (parts.length > 0 && !['s', 'iv', 'contact'].includes(parts[0])) {  
+                                return `https://t.me/i/userpic/320/${parts[0]}.jpg`;  
+                            }  
+                            return TG_LOGO;  
+                        }  
+                        return `https://icons.duckduckgo.com/ip3/${host}.ico`;  
+                    } catch(e) { return ''; }  
+                };  
+                const fallback = (e, url) => {  
+                    try {  
+                        const urlObj = new URL(url);  
+                        const domain = urlObj.hostname;  
+                        if (domain.includes('t.me') && e.target.src !== TG_LOGO) {  
+                            e.target.src = TG_LOGO;  
+                            return;  
+                        }  
+                        const g = `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;  
+                        if (e.target.src !== g) e.target.src = g;  
+                    } catch (err) { status[url] = 'is-failed'; }  
+                };  
+                // 核心：直接读取并解析 JSON  
+                const initData = async () => {  
+                    const cache = localStorage.getItem('nav_json_cache');  
+                    if (cache) data.value = JSON.parse(cache);  
+                    try {  
+                        // 从构建生成的 links.json 读取  
+                        const r = await fetch('links.json');  
+                        if (r.ok) {  
+                            const res = await r.json();  
+                            data.value = res;  
+                            localStorage.setItem('nav_json_cache', JSON.stringify(res));  
+                        }  
+                    } catch (e) { console.error("数据加载失败:", e); }  
+                };  
+                const filtered = computed(() => {  
+                    if (!q.value) return data.value;  
+                    const s = q.value.toLowerCase();  
+                    return data.value.map(c => ({  
+                        ...c,   
+                        items: (c.items||[]).filter(i =>   
+                            (i.name && i.name.toLowerCase().includes(s)) ||   
+                            (i.desc && i.desc.toLowerCase().includes(s))  
+                        )  
+                    })).filter(c => c.items.length > 0);  
+                });  
+                onMounted(() => {  
+                    const saved = localStorage.getItem('theme');  
+                    setTheme(saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches));  
+                    initData();  
+                });  
+                return { q, data, status, isDark, toggleTheme: () => setTheme(!isDark.value), getIcon, fallback, filtered };  
+            }  
+        }).mount('#app');  
+    </script>  
+</body>  
+</html>  
