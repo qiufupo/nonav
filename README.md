@@ -1,39 +1,36 @@
-# Cloudflare Pages 部署手册
+#🚀 部署说明
 
 本项目是一个极简书签导航站，它支持直接解析 **YAML** 数据格式。
 
 ---
 
-## 🚀 部署到 Cloudflare Pages
+## 🚀 Zeabur 部署步骤
 
-请按照以下步骤在 Cloudflare 控制台完成自动化部署：
-
-### 1. 关联仓库
-* 登录 [Cloudflare 控制台](https://dash.cloudflare.com/)。
-* 进入 **Workers & Pages** -> **Create application** -> **Pages** -> **Connect to Git**。
-* 选择您存放代码的 GitHub 或 GitLab 仓库。
-
-### 2. 填写构建设置
-在 **Build settings** 界面，请严格按照以下参数填写：
-
-| 配置项目 | 设置内容 |
-| :--- | :--- |
-| **Build command 构建命令** | `npm install && npm run build` |
-| **Build output directory 构建目录** | `.` |
-
-
-
-### 3. 点击部署
-* 点击 **Save and Deploy**（保存并部署）。
-* Cloudflare 会自动运行脚本，将您的 YAML 文件解析并与网页模板整合，生成最终的导航数据。
-
----
+### 创建项目
+* 在 Zeabur 控制台创建新项目
+* 选择合适的区域
+### 创建服务
+* 创建新服务
+* 连接 GitHub 仓库：https://github.com/xxxxxx/nonav.git
+### 配置部署
+* 使用上面的 Dockerfile
+* 暴露端口 8080
+* 绑定域名
+### 自动部署
+* Zeabur 会自动：
+* 克隆代码
+* 安装依赖 (npm install)
+* 构建项目 (npm run build 生成 links.json)
+* 修改 index.html 中的路径
+* 使用 Caddy 静态服务器提供文件
 
 ## ⚠️ 注意事项
 
-### 构建失败？ 请确保您的项目根目录下存在 package.json 文件。
+### 构建失败？ 请确保您的项目根目录下存在 package.json Dockerfile 文件。
 
-### 数据更新：您只需在本地修改 links.yml 并推送到仓库，Cloudflare Pages 会自动触发构建并更新网页。
+### 数据更新：
+* 您只需在本地修改 links.yml 并推送到仓库 会自动触发构建并更新网页。
+* Zeabur文件管理 /usr/share/caddy/data/links.yml 直接修改
 
 ### YAML 数据格式
 本项目直接读取 `data/links.yml`，数据结构如下：
